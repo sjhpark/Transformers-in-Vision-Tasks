@@ -53,8 +53,9 @@ class AttentionLayer(nn.Module):
             # convert att_mask which is multiplicative, to an additive mask
             # If mask[i,j] = 0, we want softmax(QKT[i,j] + additive_mask[i,j]) to be 0
             # Softmax is 0 when e^x = 0, so x could be any big negative number
-            """Additive attention ask"""
-            additive_mask = torch.ones_like(scaled_attention_scores) * (-1e9)
+            """Additive attention mask"""
+            big_negative_num = -1e9
+            additive_mask = (1 - attn_mask) * big_negative_num
             scaled_attention_scores += additive_mask
         
         # apply softmax, dropout, and use value
