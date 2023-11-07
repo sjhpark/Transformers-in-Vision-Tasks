@@ -47,7 +47,7 @@ class AttentionLayer(nn.Module):
         """Dot product = Q @ K^T"""
         dot_product = (query @ key.transpose(-2,-1))
         """Scaled attention scores (scaled dot product) = (Q @ K^T) / sqrt(embedding dimension)"""
-        scaled_attention_scores = dot_product / scale_factor
+        scaled_attn_scores = dot_product / scale_factor
 
         if attn_mask is not None:
             # convert att_mask which is multiplicative, to an additive mask
@@ -57,11 +57,11 @@ class AttentionLayer(nn.Module):
             big_negative_num = -1e9
             additive_mask = (1 - attn_mask) * big_negative_num
             """Masked scaled attention scores = scaled attention scores + additive mask"""
-            scaled_attention_scores += additive_mask
+            scaled_attn_scores += additive_mask
         
         # apply softmax, dropout, and use value
         """Attnetion probabilities = softmax(scaled attention scores)"""
-        attn_probs = self.dropout(F.softmax(scaled_attention_scores, dim=-1))
+        attn_probs = self.dropout(F.softmax(scaled_attn_scores, dim=-1))
         """Output = attention probabilities @ V"""
         y = attn_probs @ value
         return y
