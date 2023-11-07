@@ -11,41 +11,58 @@ class AttentionLayer(nn.Module):
     def __init__(self, embed_dim, dropout=0.1):
        
         super().__init__()
-        self.embed_dim = embed_dim
+        self.embed_dim = embed_dim # embedding dimension D
         # TODO: Initialize the following layers and parameters to perform attention
         # This class assumes that the input dimension for query, key and value is embed_dim
-        self.query_proj = ...
-        self.key_proj = ...
-        self.value_proj = ...
+        """W_q, W_k, W_v: Linear transformation (projection) layers for Query, Key, Value"""
+        self.query_proj = nn.Linear(embed_dim, embed_dim) # linear transformation (projection) layer for Query
+        self.key_proj = copy.deepcopy(self.query_proj) # linear transformation (projection) layer for Key
+        self.value_proj = copy.deepcopy(self.query_proj) # linear transformation (projection) layer for Value
 
-        self.dropout = ...
+        self.dropout = nn.Dropout(p=dropout)
             
     def forward(self, query, key, value, attn_mask=None):
+        """
+        N: Batch Size
+        S: Sequence Length of query
+        T: Sequence Length of key/value
+        D: Embedding Dimension
+        """
         N, S, D = query.shape
         N, T, D = value.shape
         assert key.shape == value.shape
        
         # TODO : Compute attention 
     
-        #project query, key and value  - 
-        query = ...
-        key = ...
-        value = ...
+        #project query, key and value
+        """Q, K, V""" 
+        query = self.query_proj(query) # (N,S,D); linearly projected query
+        key = self.query_proj(key) # (N,T,D); # linearly projected key
+        value = self.query_proj(value) # (N,T,D); # linearly projected value
 
         #compute dot-product attention. Don't forget the scaling value!
         #Expected shape of dot_product is (N, S, T)
-        dot_product = ...
+        """Scale factor = sqrt(embedding dimension)"""
+        scale_factor = math.sqrt(D)
+        """Dot product = Q @ K^T"""
+        dot_product = (query @ key.transpose(-2,-1))
+        """Scaled attention scores (scaled dot product) = (Q @ K^T) / sqrt(embedding dimension)"""
+        scaled_attention_scores = dot_product / scale_factor
 
         if attn_mask is not None:
             # convert att_mask which is multiplicative, to an additive mask
-            # Hint : If mask[i,j] = 0, we want softmax(QKT[i,j] + additive_mask[i,j]) to be 0
-            # Think about what inputs make softmax 0.
-            additive_mask = ...
-            dot_product += additive_mask
+            # If mask[i,j] = 0, we want softmax(QKT[i,j] + additive_mask[i,j]) to be 0
+            # Softmax is 0 when e^x = 0, so x could be any big negative number
+            """Additive attention ask"""
+            additive_mask = torch.ones_like(scaled_attention_scores) * (-1e9)
+            scaled_attention_scores += additive_mask
         
         # apply softmax, dropout, and use value
-        y = ...
-        return y  
+        """Attnetion probabilities = softmax(scaled dot product)"""
+        attn_probs = self.dropout(F.softmax(scaled_attention_scores, dim=-1))
+        """Output = attention probability @ V"""
+        y = attn_probs @ value
+        return y
 
 class MultiHeadAttentionLayer(AttentionLayer):
 
