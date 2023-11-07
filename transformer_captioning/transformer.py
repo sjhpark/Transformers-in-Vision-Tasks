@@ -56,12 +56,13 @@ class AttentionLayer(nn.Module):
             """Additive attention mask"""
             big_negative_num = -1e9
             additive_mask = (1 - attn_mask) * big_negative_num
+            """Masked scaled attention scores = scaled attention scores + additive mask"""
             scaled_attention_scores += additive_mask
         
         # apply softmax, dropout, and use value
-        """Attnetion probabilities = softmax(scaled dot product)"""
+        """Attnetion probabilities = softmax(scaled attention scores)"""
         attn_probs = self.dropout(F.softmax(scaled_attention_scores, dim=-1))
-        """Output = attention probability @ V"""
+        """Output = attention probabilities @ V"""
         y = attn_probs @ value
         return y
 
