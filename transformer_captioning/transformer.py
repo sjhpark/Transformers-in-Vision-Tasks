@@ -44,7 +44,7 @@ class AttentionLayer(nn.Module):
         #Expected shape of dot_product is (N, S, T)
         """Scale factor = sqrt(embedding dimension)"""
         scale_factor = math.sqrt(D)
-        """Dot product = Q @ K^T"""
+        """Attention scores (dot product) = Q @ K^T"""
         dot_product = (query @ key.transpose(-2,-1))
         """Scaled attention scores (scaled dot product) = (Q @ K^T) / sqrt(embedding dimension)"""
         scaled_attn_scores = dot_product / scale_factor
@@ -72,11 +72,19 @@ class MultiHeadAttentionLayer(AttentionLayer):
        
         super().__init__(embed_dim, dropout)
         self.num_heads = num_heads
+        assert embed_dim % num_heads == 0, "Dimension of the model should be divisible by the number of heads."
 
         # TODO: Initialize the following layers and parameters to perform attention
-        self.head_proj = ...
+        self.head_proj = nn.Linear(embed_dim, embed_dim) # linear transformation (projection) layer
 
     def forward(self, query, key, value, attn_mask=None):
+        """
+        H: Number of heads
+        N: Batch Size
+        S: Sequence Length of query
+        T: Sequence Length of key/value
+        D: Embedding Dimension
+        """
         H = self.num_heads
         N, S, D = query.shape
         N, T, D = value.shape
@@ -87,23 +95,37 @@ class MultiHeadAttentionLayer(AttentionLayer):
         #project query, key and value
         #after projection, split the embedding across num_heads
         #eg - expected shape for value is (N, H, T, D/H)
-        query = ...
-        key = ...
-        value = ...
+        """Q_i, K_i, V_i where i is the head number"""
+        query = self.head_proj(query).view(N, S, H, D//H) # (N,S,D) -> (N,S,H,D/H)
+        key = self.head_proj(key).view(N, T, H, D//H) # (N,T,D) -> (N,T,H,D/H)
+        value = self.head_proj(value).view(N, T, H, D//H) # (N,T,D) -> (N,T,H,D/H)
+
+        """Transpose Q_i, K_i, V_i to reorder the dimensions"""
+        query = query.transpose(1,2) # (N,S,H,D/H) -> (N,H,S,D/H)
+        key = key.transpose(1,2) # (N,T,H,D/H) -> (N,H,T,D/H)
+        value = value.transpose(1,2) # (N,T,H,D/H) -> (N,H,T,D/H)
 
         #compute dot-product attention separately for each head. Don't forget the scaling value!
         #Expected shape of dot_product is (N, H, S, T)
-        dot_product = ...
+        """Scale factor = sqrt(embedding dimension)"""
+        scale_factor = math.sqrt(D)
+        """Attention scores (dot product) = Q_i @ K_i^T"""
+        dot_product = query @ key.transpose(-2,-1) # (N,H,S,D/H) @ (N,H,D/H,T) -> (N,H,S,T)
+        """Scaled attention scores (scaled dot product) = (Q_i @ K_i^T) / sqrt(embedding dimension)"""
+        scaled_attn_scores = dot_product / scale_factor
 
         if attn_mask is not None:
-            # convert att_mask which is multiplicative, to an additive mask
-            # Hint : If mask[i,j] = 0, we want softmax(QKT[i,j] + additive_mask[i,j]) to be 0
-            # Think about what inputs make softmax 0.
-            additive_mask = ...
-            dot_product += additive_mask
+            """Additive attention mask"""
+            big_negative_num = -1e9
+            additive_mask = (1 - attn_mask) * big_negative_num
+            """Masked scaled attention scores = scaled attention scores + additive mask"""
+            scaled_attn_scores += additive_mask
         
         # apply softmax, dropout, and use value
-        y = ...
+        """Attnetion probabilities = softmax(scaled attention scores)"""
+        attn_probs = self.dropout(F.softmax(scaled_attn_scores, dim=-1))
+        """Output = attention probabilities @ V"""
+        y = attn_probs @ value
 
         # concat embeddings from different heads, and project
         output = ...
