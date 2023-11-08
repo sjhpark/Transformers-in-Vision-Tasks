@@ -184,7 +184,7 @@ class CrossAttentionBlock(nn.Module):
         # TODO: Initialize the following. Use MultiHeadAttentionLayer for cross_attn.
         self.cross_attn = MultiHeadAttentionLayer(embed_dim=input_dim, num_heads=num_heads, dropout=dropout)
         self.dropout = nn.Dropout(p=dropout)
-        self.layernorm = nn.LayerNorm(normalizeD_shape=input_dim, elementwise_affine=True)
+        self.layernorm = nn.LayerNorm(normalized_shape=input_dim, elementwise_affine=True)
        
     def forward(self, seq, cond):
         ############# TODO - Cross-attention on the sequence, using conditioning. Add dropout to attention layer output.
