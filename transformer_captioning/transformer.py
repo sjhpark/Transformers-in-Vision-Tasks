@@ -147,6 +147,7 @@ class PositionalEncoding(nn.Module):
         D: Embedding Dimension
         """
         N, S, D = x.shape
+
         # TODO - add the encoding to x
         encoding = self.encoding.weight[:S, :].unsqueeze(0) # (max_len,D) -> (S,D) -> (1,S,D)
         output = x + encoding
@@ -159,14 +160,24 @@ class SelfAttentionBlock(nn.Module):
     def __init__(self, input_dim, num_heads, dropout=0.1):
         super().__init__()
         # TODO: Initialize the following. Use MultiHeadAttentionLayer for self_attn.
-        self.self_attn = ...
-        self.dropout = ...
-        self.layernorm = ...
+        """Multi-head self-attention layer"""
+        self.self_attn = MultiHeadAttentionLayer(embed_dim=input_dim, num_heads=num_heads, dropout=dropout)
+        """Dropout layer"""
+        self.dropout = nn.Dropout(p=dropout)
+        """Layer normalization layer"""
+        self.layernorm = nn.LayerNorm(normalized_shape=input_dim, elementwise_affine=True)
        
     def forward(self, seq, mask):
         ############# TODO - Self-attention on the sequence, using the mask. Add dropout to attention layer output.
         # Then add a residual connection to the original input, and finally apply normalization. #############################
-        return out
+        """Self-attention; Query, key and value are the same"""
+        x = self.self_attn(query=seq, key=seq, value=seq, attn_mask=mask) # (N,S,D)
+        """Dropout"""
+        x = self.dropout(x) # (N,S,D)
+        """Residual connection"""
+        x = x + seq # (N,S,D)
+        """Layer normalization"""
+        x = self.layernorm(x) # (N,S,D)
 
 class CrossAttentionBlock(nn.Module):
 
