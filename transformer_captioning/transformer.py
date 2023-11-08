@@ -150,8 +150,8 @@ class PositionalEncoding(nn.Module):
 
         # TODO - add the encoding to x
         encoding = self.encoding.weight[:S, :].unsqueeze(0) # (max_len,D) -> (S,D) -> (1,S,D)
-        output = x + encoding
-        output = self.dropout(output)
+        output = x + encoding # (N,S,D) + (1,S,D) -> (N,S,D)
+        output = self.dropout(output) # (N,S,D)
         return output
 
 
@@ -170,28 +170,36 @@ class SelfAttentionBlock(nn.Module):
     def forward(self, seq, mask):
         ############# TODO - Self-attention on the sequence, using the mask. Add dropout to attention layer output.
         # Then add a residual connection to the original input, and finally apply normalization. #############################
-        """Self-attention; Query, key and value are the same"""
+        """Masked self-attention; Query, key and value are the same"""
         x = self.self_attn(query=seq, key=seq, value=seq, attn_mask=mask) # (N,S,D)
         """Dropout"""
         x = self.dropout(x) # (N,S,D)
         """Residual connection"""
-        x = x + seq # (N,S,D)
+        x = x + seq # (N,S,D) + (N,S,D) -> (N,S,D)
         """Layer normalization"""
         x = self.layernorm(x) # (N,S,D)
+        return x
 
 class CrossAttentionBlock(nn.Module):
 
     def __init__(self, input_dim, num_heads, dropout=0.1):
         super().__init__()
         # TODO: Initialize the following. Use MultiHeadAttentionLayer for cross_attn.
-        self.cross_attn = ...
-        self.dropout = ...
-        self.norm = ...
+        self.cross_attn = MultiHeadAttentionLayer(embed_dim=input_dim, num_heads=num_heads, dropout=dropout)
+        self.dropout = nn.Dropout(p=dropout)
+        self.layernorm = nn.LayerNorm(normalizeD_shape=input_dim, elementwise_affine=True)
        
     def forward(self, seq, cond):
         ############# TODO - Cross-attention on the sequence, using conditioning. Add dropout to attention layer output.
         # Then add a residual connection to the original input, and finally apply normalization. #############################
-        return out
+        """Cross-attention; Query is the sequence, key and value are the conditioning"""
+        x = self.self_attn(query=seq, key=cond, value=cond, attn_mask=None) # (N,S,D)
+        """Dropout"""
+        x = self.dropout(x) # (N,S,D)
+        """Residual connection"""
+        x = x + seq # (N,S,D) + (N,S,D) -> (N,S,D)
+        """Layer normalization"""
+        x = self.layernomr(x) # (N,S,D)
 
 class FeedForwardBlock(nn.Module):
     def __init__(self, input_dim, num_heads, dim_feedforward=2048, dropout=0.1 ):
