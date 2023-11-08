@@ -66,6 +66,7 @@ class AttentionLayer(nn.Module):
         y = attn_probs @ value
         return y
 
+
 class MultiHeadAttentionLayer(AttentionLayer):
 
     def __init__(self, embed_dim, num_heads, dropout=0.1):
@@ -125,10 +126,10 @@ class MultiHeadAttentionLayer(AttentionLayer):
         """Attnetion probabilities = softmax(scaled attention scores)"""
         attn_probs = self.dropout(F.softmax(scaled_attn_scores, dim=-1))
         """Output = attention probabilities @ V"""
-        y = attn_probs @ value
+        y = attn_probs @ value # (N,H,S,T) @ (N,H,T,D/H) -> (N,H,S,D/H)
 
         # concat embeddings from different heads, and project
-        output = ...
+        output = y.transpose(1,2).contiguous().view(N, S, D) # (N,H,S,D/H) -> (N,S,H,D/H) -> (N,S,H*D/H) = (N,S,D)
         return output
 
 
