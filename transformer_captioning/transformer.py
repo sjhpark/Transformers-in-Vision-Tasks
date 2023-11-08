@@ -66,7 +66,6 @@ class AttentionLayer(nn.Module):
         y = attn_probs @ value
         return y
 
-
 class MultiHeadAttentionLayer(AttentionLayer):
 
     def __init__(self, embed_dim, num_heads, dropout=0.1):
@@ -132,7 +131,6 @@ class MultiHeadAttentionLayer(AttentionLayer):
         output = y.transpose(1,2).contiguous().view(N, S, D) # (N,H,S,D/H) -> (N,S,H,D/H) -> (N,S,H*D/H) = (N,S,D)
         return output
 
-
 class PositionalEncoding(nn.Module):
     def __init__(self, embed_dim, dropout=0.1, max_len=5000):
         super().__init__()
@@ -153,7 +151,6 @@ class PositionalEncoding(nn.Module):
         output = x + encoding # (N,S,D) + (1,S,D) -> (N,S,D)
         output = self.dropout(output) # (N,S,D)
         return output
-
 
 class SelfAttentionBlock(nn.Module):
 
@@ -200,21 +197,33 @@ class CrossAttentionBlock(nn.Module):
         x = x + seq # (N,S,D) + (N,S,D) -> (N,S,D)
         """Layer normalization"""
         x = self.layernomr(x) # (N,S,D)
+        return x
 
 class FeedForwardBlock(nn.Module):
-    def __init__(self, input_dim, num_heads, dim_feedforward=2048, dropout=0.1 ):
+    def __init__(self, input_dim, dim_feedforward=2048, dropout=0.1):
         super().__init__()
         # TODO: Initialize the following. 
-        # MLP has the following layers : linear, relu, dropout, linear ; hidden dim of linear is given by dim_feedforward
-        self.mlp = ...
-        self.dropout = ...
-        self.norm = ...
+        # MLP has the following layers : linear, relu, dropout, linear; hidden dim of linear is given by dim_feedforward.
+        self.mlp = nn.Sequential(nn.Linear(in_features=input_dim, out_features=dim_feedforward, bias=True),
+                                nn.ReLU(),
+                                nn.Dropout(p=dropout),
+                                nn.Linear(in_features=dim_feedforward, out_features=input_dim, bias=True)
+                                )
+        self.dropout = nn.Dropout(p=dropout)
+        self.layernorm = nn.LayerNorm(normalized_shape=input_dim, elementwise_affine=True)
        
-
     def forward(self, seq):
          ############# TODO - MLP on the sequence. Add dropout to mlp layer output.
         # Then add a residual connection to the original input, and finally apply normalization. #############################
-        return out
+        """Feed-forward"""
+        x = self.mlp(seq)
+        """Dropout"""
+        x = self.dropout(x)
+        """Residual connection"""
+        x = x + seq
+        """Layer normalization"""
+        x = self.layernorm(x)
+        return x
 
 class DecoderLayer(nn.Module):
     def __init__(self, input_dim, num_heads, dim_feedforward=2048, dropout=0.1 ):
