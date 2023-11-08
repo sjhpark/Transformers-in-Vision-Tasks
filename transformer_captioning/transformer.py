@@ -137,16 +137,20 @@ class PositionalEncoding(nn.Module):
     def __init__(self, embed_dim, dropout=0.1, max_len=5000):
         super().__init__()
         # TODO - use torch.nn.Embedding to create the encoding. Initialize dropout layer.
-        self.encoding = ... 
-        self.dropout = ...
+        self.encoding = nn.Embedding(num_embeddings=max_len, embedding_dim=embed_dim) # (max_len,D)
+        self.dropout = nn.Dropout(p=dropout)
       
     def forward(self, x):
+        """
+        N: Batch Size
+        S: Sequence Length of query
+        D: Embedding Dimension
+        """
         N, S, D = x.shape
         # TODO - add the encoding to x
-
-        output = x + ...
+        encoding = self.encoding.weight[:S, :].unsqueeze(0) # (max_len,D) -> (S,D) -> (1,S,D)
+        output = x + encoding
         output = self.dropout(output)
-   
         return output
 
 
