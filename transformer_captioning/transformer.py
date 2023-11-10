@@ -273,9 +273,12 @@ class TransformerDecoder(nn.Module):
         # TODO - get caption and feature embeddings 
         # Don't forget position embeddings for captions!
         # expected caption embedding output shape : (N, T, D)
+        feature_embedding = self.feature_embedding(features) # (N,D)
+        caption_embedding = self.positional_encoding(self.caption_embedding(captions)) # (N,T,D)
 
         # Unsqueeze feature embedding along dimension 1
         # expected feature embedding output shape : (N, 1, D) 
+        feature_embedding = feature_embedding.unsqueeze(dim=1) # (N,1,D)
         return feature_embedding, caption_embedding
 
     def get_causal_mask(self, _len):
@@ -283,6 +286,15 @@ class TransformerDecoder(nn.Module):
         # This mask is multiplicative
         # setting mask[i,j] = 0 means jth element of the sequence is not used 
         # to predict the ith element of the sequence.
+        """Causal Mask in Decoder: Lower Triangular Boolean Matrix
+        Idea: 
+            - Avoid 'cheating' by predicting the ith element of the sequence by using only the elements that come before it.
+            - Prevent current element from attending to future elements.
+            - Zero out attention score when j (column) > i (row) in attention score matrix (square) of shape (S,S) where S is the target sequence length.
+        Ref1: https://pi-tau.github.io/posts/transformer/#decoder-block
+        Ref2: https://ai.stackexchange.com/questions/41508/confusion-about-triangle-mask-in-transformer-decoder
+        Ref3: https://ai.stackexchange.com/questions/42116/transformer-decoder-causal-masking-during-inference"""
+        mask = torch.ones(_len, _len, dtype=torch.bool).tril(diagonal=0).to(self.device)
         return mask
                                       
     def forward(self, features, captions):
