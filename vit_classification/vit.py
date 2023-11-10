@@ -36,7 +36,7 @@ class ViT(nn.Module):
             Construct a new ViT instance.
             Inputs
             - patch_dim: the dimension of each patch
-            - d_model: the dimension of the input to the transformer blocks
+            - d_model: the dimension of the input (embeddings) to the transformer blocks
             - d_ff: the dimension of the intermediate layer in the feed forward block 
             - num_heads: the number of heads in the multi head attention layer
             - num_layers: the number of transformer blocks
@@ -53,12 +53,19 @@ class ViT(nn.Module):
         self.num_patches = num_patches
         self.num_classes = num_classes
         self.device = device
-
-        self.patch_embedding = None # TODO (Linear Layer that takes as input a patch and outputs a d_model dimensional vector)
-        self.positional_encoding = None # TODO (use the positional encoding from the transformer captioning solution)
-        self.fc = None # TODO (takes as input the embedding corresponding to the [CLS] token and outputs the logits for each class)
-        self.cls_token = None # TODO (learnable [CLS] token embedding)
-
+        
+        # TODO - Initialize following layers
+        """Patch Embedding Layer"""
+        self.patch_embedding = nn.Linear(patch_dim, d_model) # Linear Layer that takes as input a patch and outputs a d_model dimensional vector
+        """Positional Encoding Layer"""
+        self.positional_encoding = PositionalEncoding(embed_dim=d_model, dropout=0.1, max_len=5000) # positional encoding
+        """Final Linear Classification Layer"""
+        self.fc = nn.Linear(d_model, num_classes)# takes as input the embedding corresponding to the [CLS] token and outputs the logits for each class
+        """CLS Token Embedding
+        Shape: (num [CLS] per input sequence = 1, position of [CLS] token ([CLS] token is always in the beginning of input sequence) = 1, dim of embedding = d_model)
+        We use nn.Parameter() to make CLS token embedding tensor as a learnable parameter so that ts gradients will be computed and updated during backpropagation."""
+        self.cls_token = nn.Parameter(torch.randn(1, 1, d_model)) # learnable [CLS] token embedding
+        
         self.layers = nn.ModuleList([EncoderLayer(d_model, num_heads, d_ff) for _ in range(num_layers)])
 
         self.apply(self._init_weights)
