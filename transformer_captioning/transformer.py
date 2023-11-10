@@ -55,7 +55,8 @@ class AttentionLayer(nn.Module):
             # Softmax is 0 when e^x = 0, so x could be any big negative number
             """Additive attention mask"""
             big_negative_num = -1e9
-            additive_mask = (1 - attn_mask) * big_negative_num
+            # attn_mask is a boolean lower triangular matrix
+            additive_mask = (1 - attn_mask.float()) * big_negative_num
             """Masked scaled attention scores = scaled attention scores + additive mask"""
             scaled_attn_scores += additive_mask
         
@@ -117,7 +118,7 @@ class MultiHeadAttentionLayer(AttentionLayer):
         if attn_mask is not None:
             """Additive attention mask"""
             big_negative_num = -1e9
-            additive_mask = (1 - attn_mask) * big_negative_num
+            additive_mask = (1 - attn_mask.float()) * big_negative_num
             """Masked scaled attention scores = scaled attention scores + additive mask"""
             scaled_attn_scores += additive_mask
         
@@ -190,13 +191,13 @@ class CrossAttentionBlock(nn.Module):
         ############# TODO - Cross-attention on the sequence, using conditioning. Add dropout to attention layer output.
         # Then add a residual connection to the original input, and finally apply normalization. #############################
         """Cross-attention; Query is the sequence, key and value are the conditioning"""
-        x = self.self_attn(query=seq, key=cond, value=cond, attn_mask=None) # (N,S,D)
+        x = self.cross_attn(query=seq, key=cond, value=cond, attn_mask=None) # (N,S,D)
         """Dropout"""
         x = self.dropout(x) # (N,S,D)
         """Residual connection"""
         x = x + seq # (N,S,D) + (N,S,D) -> (N,S,D)
         """Layer normalization"""
-        x = self.layernomr(x) # (N,S,D)
+        x = self.layernorm(x) # (N,S,D)
         return x
 
 class FeedForwardBlock(nn.Module):
@@ -230,7 +231,7 @@ class DecoderLayer(nn.Module):
         super().__init__()
         self.self_atn_block = SelfAttentionBlock(input_dim, num_heads, dropout)
         self.cross_atn_block = CrossAttentionBlock(input_dim, num_heads, dropout)
-        self.feedforward_block = FeedForwardBlock(input_dim, num_heads, dim_feedforward, dropout)
+        self.feedforward_block = FeedForwardBlock(input_dim, dim_feedforward, dropout)
 
     def forward(self, seq, cond, mask):
         out = self.self_atn_block(seq, mask)
