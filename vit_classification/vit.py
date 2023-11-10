@@ -16,7 +16,7 @@ class EncoderLayer(nn.Module):
     def __init__(self, d_model, num_heads, d_ff=2048, dropout=0.1):
         super().__init__()
         self.self_attention = SelfAttentionBlock(d_model, num_heads, dropout=dropout)
-        self.feed_forward = FeedForwardBlock(d_model, num_heads, d_ff, dropout=dropout)
+        self.feed_forward = FeedForwardBlock(d_model, d_ff, dropout=dropout)
 
     def forward(self, seq, mask):
         x = self.self_attention(seq, mask)
@@ -56,14 +56,17 @@ class ViT(nn.Module):
         
         # TODO - Initialize following layers
         """Patch Embedding Layer"""
-        self.patch_embedding = nn.Linear(patch_dim, d_model) # Linear Layer that takes as input a patch and outputs a d_model dimensional vector
+        self.patch_embedding = nn.Linear(patch_dim*patch_dim*3, d_model) # Linear Layer that takes as input a patch (patch_dim*patch_dim*3) and outputs a d_model dimensional vector
         """Positional Encoding Layer"""
         self.positional_encoding = PositionalEncoding(embed_dim=d_model, dropout=0.1, max_len=5000) # positional encoding
         """Final Linear Classification Layer"""
         self.fc = nn.Linear(d_model, num_classes)# takes as input the embedding corresponding to the [CLS] token and outputs the logits for each class
         """CLS Token Embedding
-        Shape: (num [CLS] per input sequence = 1, position of [CLS] token ([CLS] token is always in the beginning of input sequence) = 1, dim of embedding = d_model)
-        We use nn.Parameter() to make CLS token embedding tensor as a learnable parameter so that ts gradients will be computed and updated during backpropagation."""
+        - Shape: (num [CLS] per input sequence = 1, position of [CLS] token ([CLS] token is always in the beginning of input sequence) = 1, dim of embedding = d_model)
+        - We use nn.Parameter() to make CLS token embedding tensor as a learnable parameter so that ts gradients will be computed and updated during backpropagation.
+        - The [CLS] token is designed to capture global information in a Vision Transformer (ViT) by aggregating local information from all the patches of the image.
+            The [CLS] token is usually placed at the beginning of the input sequence. This position allows it to be processed by the self-attention mechanism 
+            in the transformer, enabling it to attend to all other positions (patches) in the sequence."""
         self.cls_token = nn.Parameter(torch.randn(1, 1, d_model)) # learnable [CLS] token embedding
         
         self.layers = nn.ModuleList([EncoderLayer(d_model, num_heads, d_ff) for _ in range(num_layers)])
@@ -82,9 +85,12 @@ class ViT(nn.Module):
         """
 
         # TODO - Break images into a grid of patches
-        # Feel free to use pytorch built-in functions to do this
-        
-        return images
+        """Patchify K (patch_dim x patch_dim) patches from each image in the batch."""
+        N,C,H,W = images.shape # N = batch size, C = num channels, H = height, W = width
+        patches = images.unfold(dimension=2, size=self.patch_dim, step=self.patch_dim).unfold(dimension=3, size=self.patch_dim, step=self.patch_dim) # (N, C, num_vertical_slices, num_horizontal_slices, patch_dim, patch_dim)
+        patches.permute(0, 2, 3, 1, 4, 5) # (N, num_vertical_slices, num_horizontal_slices, C, patch_dim, patch_dim)
+        patches = patches.reshape(N, -1, self.patch_dim * self.patch_dim * C) # (N, num_vertical_slices * num_horizontal_slices = num_patches, patch_dim * patch_dim * C)
+        return patches
 
     def forward(self, images):
         """
