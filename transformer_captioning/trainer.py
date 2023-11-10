@@ -25,8 +25,8 @@ class Trainer(object):
         #Make sure to compute this loss only for indices where label is not the null token.
         #The loss should be averaged over batch and sequence dimensions. 
         criterion = torch.nn.CrossEntropyLoss(ignore_index=0)
-        predictions = predictions.view(-1, predictions.shape[-1]) # (B*S,V) where B: batch size, S: sequence length, V: vocab size
-        labels = labels.view(-1) # (B*S,V)
+        predictions = predictions.reshape(-1, predictions.shape[-1]) # (B*S,V) where B: batch size, S: sequence length, V: vocab size
+        labels = labels.reshape(-1) # (B*S,V)
         loss = criterion(predictions, labels)
         return loss
     
