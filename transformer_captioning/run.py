@@ -5,6 +5,13 @@ from torch.utils.data import DataLoader
 from trainer import Trainer
 from transformer import TransformerDecoder
 from matplotlib import pyplot as plt
+import argparse
+
+parser = argparse.ArgumentParser()
+parser.add_argument('--num_heads', type=int, default=2, help='number of attention heads')
+parser.add_argument('--num_layers', type=int, default=2, help='number of transformer layers')
+parser.add_argument('--learning_rate', type=float, default=1e-4, help='learning rate')
+args = parser.parse_args()
 
 set_all_seeds(42) ### DO NOT CHANGE THIS LINE
 exp_name = 'case1'
@@ -22,15 +29,15 @@ transformer = TransformerDecoder(
           idx_to_word = train_dataset.data['idx_to_word'],
           input_dim=train_dataset.data['train_features'].shape[1],
           embed_dim=256,
-          num_heads=2,
-          num_layers=2,
+          num_heads=args.num_heads,
+          num_layers=args.num_layers,
           max_length=30,
           device = device
         )
 
 trainer = Trainer(transformer, train_dataloader, val_dataloader,
           num_epochs=100,
-          learning_rate=1e-4,
+          learning_rate=args.learning_rate,
           device = device
         )
 
