@@ -10,7 +10,7 @@ import argparse
 parser = argparse.ArgumentParser()
 parser.add_argument('--num_heads', type=int, default=2, help='number of attention heads')
 parser.add_argument('--num_layers', type=int, default=2, help='number of transformer layers')
-parser.add_argument('--learning_rate', type=float, default=1e-4, help='learning rate')
+parser.add_argument('--lr', type=float, default=1e-4, help='learning rate')
 args = parser.parse_args()
 
 set_all_seeds(42) ### DO NOT CHANGE THIS LINE
@@ -37,7 +37,7 @@ transformer = TransformerDecoder(
 
 trainer = Trainer(transformer, train_dataloader, val_dataloader,
           num_epochs=100,
-          learning_rate=args.learning_rate,
+          learning_rate=args.lr,
           device = device
         )
 

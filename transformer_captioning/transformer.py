@@ -148,8 +148,17 @@ class PositionalEncoding(nn.Module):
         N, S, D = x.shape
 
         # TODO - add the encoding to x
-        encoding = self.encoding.weight[:S, :].unsqueeze(0) # (max_len,D) -> (S,D) -> (1,S,D)
-        output = x + encoding # (N,S,D) + (1,S,D) -> (N,S,D)
+        # position_encoded_x = self.encoding.weight[:S, :].unsqueeze(0) # (max_len,D) -> (S,D) -> (1,S,D)
+        position = torch.arange(S, dtype=torch.long, device=x.device) # (S); position index for each token in the sequence
+        # position = position.repeat(N,1) # (N,S)
+        add = 0
+        positions = torch.zeros(N, S, dtype=torch.long, device=x.device) # (N,S)
+        for i in range(N):
+            # stack the position tensor N times
+            positions[i] = position + add
+            add += S
+        position_encoded_x = self.encoding(position) # (N,S,D)
+        output = x + position_encoded_x # (N,S,D) + (N,S,D) -> (N,S,D)
         output = self.dropout(output) # (N,S,D)
         return output
 
