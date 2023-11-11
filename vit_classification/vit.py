@@ -36,7 +36,7 @@ class ViT(nn.Module):
             Construct a new ViT instance.
             Inputs
             - patch_dim: the dimension of each patch
-            - d_model: the dimension of the input (embeddings) to the transformer blocks
+            - d_model: embedding dimension for per patch; the dimension of the input (embeddings) to the transformer blocks
             - d_ff: the dimension of the intermediate layer in the feed forward block 
             - num_heads: the number of heads in the multi head attention layer
             - num_layers: the number of transformer blocks
@@ -62,12 +62,12 @@ class ViT(nn.Module):
         """Final Linear Classification Layer"""
         self.fc = nn.Linear(d_model, num_classes)# takes as input the embedding corresponding to the [CLS] token and outputs the logits for each class
         """CLS Token Embedding
-        - Shape: (num [CLS] per input sequence = 1, position of [CLS] token ([CLS] token is always in the beginning of input sequence) = 1, dim of embedding = d_model)
+        - Shape: (batch size = 1, number of [CLS] token per input sequence = 1, dim of embedding = d_model)
         - We use nn.Parameter() to make CLS token embedding tensor as a learnable parameter so that ts gradients will be computed and updated during backpropagation.
         - The [CLS] token is designed to capture global information in a Vision Transformer (ViT) by aggregating local information from all the patches of the image.
             The [CLS] token is usually placed at the beginning of the input sequence. This position allows it to be processed by the self-attention mechanism 
             in the transformer, enabling it to attend to all other positions (patches) in the sequence."""
-        self.cls_token = nn.Parameter(torch.randn(1, 1, d_model)) # learnable [CLS] token embedding
+        self.cls_token = nn.Parameter(torch.randn(1, 1, d_model)) # (N=1,1,d_model); learnable [CLS] token embedding
         
         self.layers = nn.ModuleList([EncoderLayer(d_model, num_heads, d_ff) for _ in range(num_layers)])
 
@@ -101,10 +101,15 @@ class ViT(nn.Module):
                 - logits: a FloatTensor of shape (N, C) giving the logits for each class
         """
         
-        patches = self.patchify(images)
-        patches_embedded = self.patch_embedding(patches)
+        """Patchify input images (e.g. 16 8x8 patches per 32x32 image)"""
+        patches = self.patchify(images) # (N, num_patches, patch_dim * patch_dim * C)
+        """Generate an embedding vector per patch (e.g. 1x256 embedding vector per patch)"""
+        patches_embedded = self.patch_embedding(patches) # (N, num_patches, d_model)
         
-        output = None # TODO (append a CLS token to the beginning of the sequence of patch embeddings)
+        # TODO - Append a CLS token to the beginning of the sequence of patch embeddings
+        """Append a CLS token of shape (N=1,1,d_model) to the beginning of the sequence of patch embeddings of shape (N, num_patches, d_model)"""
+        cls_token_repeat = self.cls_token.repeat(patches_embedded.shape[0], 1, 1) # (1, 1, d_model) -> (N, 1, d_model)
+        output = torch.cat((cls_token_repeat, patches_embedded), dim=1) # (N, num_patches + 1, d_model)
 
         output = self.positional_encoding(patches_embedded)
         mask = torch.ones((self.num_patches, self.num_patches), device=self.device)
@@ -112,7 +117,11 @@ class ViT(nn.Module):
         for layer in self.layers:
             output = layer(output, mask)
 
-        output = None # TODO (take the embedding corresponding to the [CLS] token and feed it through a linear layer to obtain the logits for each class)
+        # TODO (take the embedding corresponding to the [CLS] token and feed it through a linear layer to obtain the logits for each class)
+        """Extract embedding vector corresponding to the [CLS] token; 
+        Remember that the [CLS] embedding is the first embedding in the sequence of patch embeddings"""
+        cls_embedding = output[:, 0, :] # (N, d_model)
+        output = self.fc(cls_embedding) # (N, num_classes)
 
         return output
 
