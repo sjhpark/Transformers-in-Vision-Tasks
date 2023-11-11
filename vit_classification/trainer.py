@@ -1,3 +1,4 @@
+import os
 import numpy as np
 import torch
 from vit import ViT
@@ -43,15 +44,12 @@ class Trainer:
         """
             Compute cross entropy loss between predictions and labels.
             Inputs:
-                - predictions: PyTorch Tensor of shape (N, C) giving logits for each class
+                - predictions: PyTorch Tensor of shape (N, num_classes) giving logits for each class
                 - labels: PyTorch Tensor of shape (N,) giving labels for each input
         """
-
-        
         # TODO - Compute cross entropy loss between predictions and labels. 
-        loss = None
-        
-
+        criterion = torch.nn.CrossEntropyLoss()
+        loss = criterion(predictions, labels)
         return loss
 
     def train(self):
@@ -90,4 +88,6 @@ class Trainer:
                 print( "Train accuracy: %f" % (train_accuracy))
             
             if i % self.save_every == 0:
+                if not os.path.isdir('checkpoints'):
+                    os.mkdir('checkpoints')
                 torch.save(self.model.state_dict(), 'checkpoints/model_{}.pth'.format(i))
