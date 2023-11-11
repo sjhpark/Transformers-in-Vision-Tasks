@@ -9,10 +9,10 @@ from matplotlib import pyplot as plt
 
 # load cifar10 training data from torchvision
 train_dataset = torchvision.datasets.CIFAR10(root='./data', train=True, download=True, transform=transforms.ToTensor())
-train_dataloader =  DataLoader(train_dataset, batch_size=64, shuffle=True)
+train_dataloader =  DataLoader(train_dataset, batch_size=64, shuffle=True, num_workers=4)
 
 test_dataset = torchvision.datasets.CIFAR10(root='./data', train=False, download=True, transform=transforms.ToTensor())
-test_dataloader =  DataLoader(test_dataset, batch_size=64, shuffle=True)
+test_dataloader =  DataLoader(test_dataset, batch_size=64, shuffle=True, num_workers=4)
 
 device = 'cuda'
 transformer = ViT(
